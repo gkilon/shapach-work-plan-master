@@ -2,7 +2,17 @@
 import { GoogleGenAI } from "@google/genai";
 import { WorkPlanData } from "./types";
 
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+/**
+ * Creates a fresh instance of the Gemini API client.
+ * Uses the environment-injected API_KEY.
+ */
+const getAI = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("An API Key must be set. Please use the 'Connect API Key' button in the interface.");
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 export const getStepSuggestions = async (stepIndex: number, currentData: Partial<WorkPlanData>) => {
   const ai = getAI();
@@ -31,10 +41,15 @@ export const getStepSuggestions = async (stepIndex: number, currentData: Partial
       model: 'gemini-3-flash-preview',
       contents: prompt,
     });
-    return response.text || "לא הצלחתי לגבש המלצות כרגע.";
-  } catch (error) {
-    console.error("AI Error:", error);
-    return "שגיאה בתקשורת עם הבינה המלאכותית.";
+    
+    if (!response.text) {
+      throw new Error("No response from AI model.");
+    }
+    
+    return response.text;
+  } catch (error: any) {
+    console.error("AI Error Details:", error);
+    throw error;
   }
 };
 
@@ -64,9 +79,14 @@ export const generateFinalIntegration = async (data: WorkPlanData) => {
       model: 'gemini-3-pro-preview',
       contents: prompt,
     });
-    return response.text || "שגיאה ביצירת האינטגרציה.";
-  } catch (error) {
-    console.error("AI Integration Error:", error);
-    return "שגיאה בתהליך האינטגרציה הסופי.";
+    
+    if (!response.text) {
+      throw new Error("Final report generation failed.");
+    }
+    
+    return response.text;
+  } catch (error: any) {
+    console.error("AI Integration Error Details:", error);
+    throw error;
   }
 };

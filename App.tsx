@@ -4,7 +4,7 @@ import {
   ChevronRight, ChevronLeft, Sparkles, Target, ShieldAlert, Eye, 
   ListTodo, TrendingUp, BrainCircuit, Save, Trash2, Calendar, 
   User, AlertCircle, FileText, Zap, CheckCircle2, Info, Lightbulb,
-  Map, MessageSquare, Quote, PlayCircle, Award
+  Map, MessageSquare, Quote, PlayCircle, Award, Key
 } from 'lucide-react';
 import { Step, STEP_NAMES, WorkPlanData, SwotData, SmartObjective, Task, METHODOLOGY_GUIDANCE, WORKSHOP_STOPS } from './types';
 import { getStepSuggestions, generateFinalIntegration } from './geminiService';
@@ -24,6 +24,26 @@ export default function App() {
   const [finalAiReport, setFinalAiReport] = useState('');
   const [activeTab, setActiveTab] = useState<'original' | 'ai'>('original');
   const [showWorkshopStop, setShowWorkshopStop] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkKey = async () => {
+      if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
+        const selected = await window.aistudio.hasSelectedApiKey();
+        setHasApiKey(selected);
+      }
+    };
+    checkKey();
+  }, []);
+
+  const handleOpenKeySelector = async () => {
+    if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
+      await window.aistudio.openSelectKey();
+      setHasApiKey(true);
+      setError(null);
+    }
+  };
 
   const nextStep = () => {
     const nextS = currentStep + 1;
@@ -39,9 +59,21 @@ export default function App() {
 
   const fetchSuggestions = async () => {
     setLoadingAi(true);
-    const suggestion = await getStepSuggestions(currentStep, data);
-    setAiSuggestions(suggestion);
-    setLoadingAi(false);
+    setError(null);
+    try {
+      const suggestion = await getStepSuggestions(currentStep, data);
+      setAiSuggestions(suggestion);
+    } catch (err: any) {
+      console.error(err);
+      if (err.message?.includes("Requested entity was not found")) {
+        setHasApiKey(false);
+        setError("נדרש חיבור מחדש של מפתח ה-API.");
+      } else {
+        setError("חלה שגיאה בחיבור לבינה המלאכותית.");
+      }
+    } finally {
+      setLoadingAi(false);
+    }
   };
 
   useEffect(() => {
@@ -52,16 +84,20 @@ export default function App() {
 
   const handleFinalIntegration = async () => {
     setLoadingAi(true);
-    const report = await generateFinalIntegration(data);
-    setFinalAiReport(report);
-    setLoadingAi(false);
+    setError(null);
+    try {
+      const report = await generateFinalIntegration(data);
+      setFinalAiReport(report);
+    } catch (err: any) {
+      setError("נכשלנו ביצירת האינטגרציה הסופית. אנא נסה שנית.");
+    } finally {
+      setLoadingAi(false);
+    }
   };
 
-  // SplashScreen (Opening Slide)
   if (!isStarted) {
     return (
       <div className="min-h-screen luxury-gradient text-slate-100 flex items-center justify-center p-6 text-center font-sans overflow-hidden relative">
-        {/* Animated Background Orbs */}
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-amber-500/10 rounded-full blur-[120px] animate-pulse" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] animate-pulse" />
 
@@ -76,31 +112,30 @@ export default function App() {
                 סדנת תוכניות עבודה <span className="text-amber-500">שפ"ח</span>
               </h1>
               <p className="text-xl md:text-2xl text-slate-400 font-medium max-w-2xl mx-auto leading-relaxed">
-                ברוכים הבאים למרחב הניהול האסטרטגי. כאן נהפוך חזון מקצועי לתוכנית פעולה אופרטיבית, מבוססת נתונים ומגובה בבינה מלאכותית.
+                מרחב ניהול אסטרטגי חכם. הופכים חזון מקצועי לתוכנית עבודה מדידה ומרשימה.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-3xl">
-              {[
-                { icon: <Target className="w-5 h-5" />, text: "מיקוד אסטרטגי" },
-                { icon: <Sparkles className="w-5 h-5" />, text: "ליווי AI חכם" },
-                { icon: <Award className="w-5 h-5" />, text: "תוצר סופי יוקרתי" }
-              ].map((item, i) => (
-                <div key={i} className="bg-slate-900/50 p-4 rounded-2xl border border-slate-800 flex items-center justify-center gap-3 text-sm font-bold text-slate-300">
-                  <span className="text-amber-500">{item.icon}</span>
-                  {item.text}
-                </div>
-              ))}
-            </div>
-
-            <button 
-              onClick={() => setIsStarted(true)}
-              className="group relative flex items-center gap-4 px-16 py-6 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-2xl rounded-[2.5rem] transition-all shadow-[0_20px_50px_rgba(245,158,11,0.3)] active:scale-95 overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-              <span className="relative z-10">בואו נתחיל</span>
-              <PlayCircle className="relative z-10 w-8 h-8 group-hover:translate-x-[-8px] transition-transform" />
-            </button>
+            {!hasApiKey ? (
+              <div className="space-y-6 bg-amber-500/5 p-8 rounded-3xl border border-amber-500/20">
+                <p className="text-amber-400 font-bold">לפני שמתחילים, יש לחבר את המערכת ל-API מאובטח</p>
+                <button 
+                  onClick={handleOpenKeySelector}
+                  className="flex items-center gap-3 px-10 py-4 bg-amber-500 text-slate-950 font-black rounded-2xl shadow-xl hover:bg-amber-400 transition-all"
+                >
+                  <Key className="w-5 h-5" /> התחבר ל-Gemini API
+                </button>
+                <p className="text-[10px] text-slate-500 italic">השימוש במודל Gemini 3 Pro דורש הגדרת Billing ב-Google Cloud</p>
+              </div>
+            ) : (
+              <button 
+                onClick={() => setIsStarted(true)}
+                className="group relative flex items-center gap-4 px-16 py-6 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-2xl rounded-[2.5rem] transition-all shadow-[0_20px_50px_rgba(245,158,11,0.3)] active:scale-95 overflow-hidden"
+              >
+                <span className="relative z-10">בואו נתחיל</span>
+                <PlayCircle className="relative z-10 w-8 h-8 group-hover:translate-x-[-8px] transition-transform" />
+              </button>
+            )}
             
             <p className="text-slate-500 text-sm font-medium">פותח במיוחד עבור מנהלי שירותים פסיכולוגיים בישראל</p>
           </div>
@@ -111,7 +146,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen luxury-gradient text-slate-100 flex flex-col font-sans selection:bg-amber-500/30">
-      {/* Header */}
       <header className="p-6 border-b border-slate-800 sticky top-0 z-50 glass-card">
         <div className="container mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-4 cursor-pointer" onClick={() => setIsStarted(false)}>
@@ -141,7 +175,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* Workshop Stop Modal */}
       {showWorkshopStop && WORKSHOP_STOPS[currentStep] && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
           <div className="glass-card max-w-2xl w-full p-10 md:p-16 rounded-[3rem] border-amber-500/20 shadow-2xl text-center space-y-8">
@@ -172,11 +205,8 @@ export default function App() {
 
       <main className="flex-1 container mx-auto p-4 md:p-8 flex flex-col lg:flex-row gap-8">
         <div className="flex-1 space-y-6 animate-in fade-in duration-700">
-          
-          {/* Context Header */}
           {renderContextInheritance(currentStep, data)}
 
-          {/* Step Main Area */}
           <div className="glass-card rounded-[2.5rem] p-8 md:p-12 border-slate-700/30 shadow-2xl relative overflow-hidden">
              <div className="relative z-10 space-y-8">
                <div className="flex items-center gap-4 mb-2 text-slate-100">
@@ -186,7 +216,6 @@ export default function App() {
 
                {renderStepContent(currentStep, data, setData, finalAiReport, activeTab, setActiveTab)}
                
-               {/* Methodology Strip */}
                {currentStep !== Step.SUMMARY && (
                  <div className="mt-12 p-8 bg-blue-500/5 rounded-3xl border border-blue-500/10 flex flex-col md:flex-row items-start md:items-center gap-8">
                     <div className="p-4 bg-blue-500/10 rounded-2xl shrink-0">
@@ -211,7 +240,6 @@ export default function App() {
              </div>
           </div>
 
-          {/* Navigation */}
           <div className="flex justify-between items-center px-4">
             <button 
               onClick={prevStep} 
@@ -229,20 +257,28 @@ export default function App() {
           </div>
         </div>
 
-        {/* Intelligence Sidebar */}
         <aside className="w-full lg:w-80 shrink-0 space-y-6">
           <div className="glass-card p-8 rounded-[2.5rem] border-amber-500/10">
             <div className="flex items-center gap-3 mb-6">
               <Sparkles className="text-amber-500 w-5 h-5" />
               <h3 className="font-bold text-xl">סוכן אסטרטגיה AI</h3>
             </div>
+            
+            {error && (
+              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
             <button 
               onClick={fetchSuggestions} 
-              disabled={loadingAi}
-              className="w-full py-4 bg-slate-900 border border-slate-800 rounded-xl mb-6 font-bold flex items-center justify-center gap-3 hover:bg-slate-800 transition-colors shadow-inner"
+              disabled={loadingAi || !hasApiKey}
+              className="w-full py-4 bg-slate-900 border border-slate-800 rounded-xl mb-6 font-bold flex items-center justify-center gap-3 hover:bg-slate-800 transition-colors shadow-inner disabled:opacity-50"
             >
               {loadingAi ? <div className="animate-spin h-5 w-5 border-b-2 border-amber-500 rounded-full" /> : <><Zap className="w-4 h-4 text-amber-500" /> קבל תובנות ושיפורים</>}
             </button>
+            
             <div className="bg-slate-950/40 p-5 rounded-2xl border border-slate-800 min-h-[350px] text-[13px] leading-relaxed text-slate-300 shadow-inner">
               {aiSuggestions ? (
                 <div className="whitespace-pre-wrap animate-in fade-in duration-500 font-medium">{aiSuggestions}</div>
@@ -262,10 +298,8 @@ export default function App() {
 
 function renderContextInheritance(step: Step, data: WorkPlanData) {
   if (step === Step.CONTEXT) return null;
-  
   let title = "";
   let content = "";
-  
   switch(step) {
     case Step.SWOT: title = "מיפוי ורקע"; content = data.selfContext; break;
     case Step.VISION: title = "תובנת SWOT"; content = data.swot.strengths[0] || "טרם הוגדרו חוזקות"; break;
@@ -275,7 +309,6 @@ function renderContextInheritance(step: Step, data: WorkPlanData) {
     case Step.CONSTRAINTS: title = "תוכנית ביצוע"; content = `${data.tasks.length} משימות מתוזמנות`; break;
     default: return null;
   }
-
   return (
     <div className="bg-slate-900/40 border border-slate-800 rounded-2xl px-6 py-3 flex items-center justify-between animate-in slide-in-from-top duration-500 shadow-sm">
       <div className="flex items-center gap-4">
@@ -289,7 +322,6 @@ function renderContextInheritance(step: Step, data: WorkPlanData) {
 
 function renderStepContent(step: Step, data: WorkPlanData, setData: any, finalAiReport: string, activeTab: string, setActiveTab: any) {
   const inputClass = "w-full bg-slate-950/40 border border-slate-800 rounded-3xl p-8 focus:ring-2 focus:ring-amber-500 outline-none text-xl leading-relaxed transition-all shadow-inner placeholder:text-slate-800 text-slate-200";
-  
   const addItem = (listName: string, item: any) => setData((prev: any) => ({ ...prev, [listName]: [...prev[listName], item] }));
   const removeItem = (listName: string, idOrIdx: any) => setData((prev: any) => ({ ...prev, [listName]: prev[listName].filter((x: any, i: number) => typeof x === 'string' ? i !== idOrIdx : x.id !== idOrIdx) }));
 
@@ -300,12 +332,7 @@ function renderStepContent(step: Step, data: WorkPlanData, setData: any, finalAi
           <p className="text-slate-400 font-medium text-lg leading-relaxed">
             השלב הראשון הוא הבנת נקודת המוצא. מה מאפיין את הסביבה שלכם כרגע? אילו אתגרים מעסיקים את היחידה שלכם השנה?
           </p>
-          <textarea 
-            className={inputClass + " h-80"} 
-            placeholder="תאר כאן את הרקע, הסביבה והתחושות הנוכחיות של היחידה..." 
-            value={data.selfContext} 
-            onChange={(e) => setData({...data, selfContext: e.target.value})} 
-          />
+          <textarea className={inputClass + " h-80"} placeholder="תאר כאן את הרקע, הסביבה והתחושות הנוכחיות של היחידה..." value={data.selfContext} onChange={(e) => setData({...data, selfContext: e.target.value})} />
         </div>
       );
     case Step.SWOT:
@@ -320,16 +347,7 @@ function renderStepContent(step: Step, data: WorkPlanData, setData: any, finalAi
             <div key={cat.key} className={`p-10 rounded-[2.5rem] border border-slate-800 ${cat.bg} hover:border-slate-700 transition-all`}>
               <h4 className={`font-black text-lg uppercase tracking-widest mb-6 ${cat.color}`}>{cat.label}</h4>
               <div className="flex gap-2 mb-6">
-                <input 
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-4 text-sm focus:ring-1 focus:ring-amber-500 outline-none text-slate-200" 
-                  placeholder="הוסף פריט..." 
-                  onKeyDown={(e) => { 
-                    if(e.key==='Enter' && (e.target as HTMLInputElement).value) { 
-                      setData({...data, swot: {...data.swot, [cat.key]: [...(data.swot[cat.key as keyof SwotData]), (e.target as HTMLInputElement).value]}}); 
-                      (e.target as HTMLInputElement).value=''; 
-                    } 
-                  }} 
-                />
+                <input className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-4 text-sm focus:ring-1 focus:ring-amber-500 outline-none text-slate-200" placeholder="הוסף פריט..." onKeyDown={(e) => { if(e.key==='Enter' && (e.target as HTMLInputElement).value) { setData({...data, swot: {...data.swot, [cat.key]: [...(data.swot[cat.key as keyof SwotData]), (e.target as HTMLInputElement).value]}}); (e.target as HTMLInputElement).value=''; } }} />
               </div>
               <ul className="space-y-3">
                 {(data.swot[cat.key as keyof SwotData] as string[]).map((item, i) => (
@@ -363,7 +381,6 @@ function renderStepContent(step: Step, data: WorkPlanData, setData: any, finalAi
                 <button onClick={() => removeItem('highLevelGoals', i)} className="text-slate-700 hover:text-red-400"><Trash2 className="w-8 h-8"/></button>
               </div>
             ))}
-            {data.highLevelGoals.length === 0 && <div className="text-center py-20 opacity-20 italic">לא הוגדרו מטרות על</div>}
           </div>
         </div>
       );
@@ -379,8 +396,8 @@ function renderStepContent(step: Step, data: WorkPlanData, setData: any, finalAi
               </div>
               <div className="space-y-4">
                 {data.objectives.filter(o => o.goalIndex === gIdx).map(obj => (
-                  <div key={obj.id} className="flex justify-between items-center bg-slate-900/60 p-6 rounded-2xl border border-slate-800 hover:border-amber-500/20 transition-all">
-                    <span className="text-lg font-medium flex items-center gap-4 text-slate-100"><div className="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" /> {obj.text}</span>
+                  <div key={obj.id} className="flex justify-between items-center bg-slate-900/60 p-6 rounded-2xl border border-slate-800 hover:border-amber-500/20 transition-all text-slate-100 font-medium">
+                    <span className="flex items-center gap-4"><div className="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" /> {obj.text}</span>
                     <button onClick={() => removeItem('objectives', obj.id)} className="text-slate-700 hover:text-red-400"><Trash2 className="w-6 h-6"/></button>
                   </div>
                 ))}
@@ -399,30 +416,14 @@ function renderStepContent(step: Step, data: WorkPlanData, setData: any, finalAi
                 <h4 className="font-black text-xl text-white">יעד: {obj.text}</h4>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                <div className="space-y-2">
-                  <label className="text-[10px] text-slate-500 uppercase font-black tracking-widest mr-2">מה המשימה?</label>
-                  <input id={`t-d-${obj.id}`} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-sm text-slate-200" placeholder="תיאור המשימה..." />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] text-slate-500 uppercase font-black tracking-widest mr-2">מי האחראי?</label>
-                  <input id={`t-r-${obj.id}`} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-sm text-slate-200" placeholder="שם האחראי..." />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] text-slate-500 uppercase font-black tracking-widest mr-2">לו''ז ומשאבים</label>
-                  <input id={`t-t-${obj.id}`} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-sm text-slate-200" placeholder="מתי ועם מה?" />
-                </div>
-                <div className="flex items-end">
-                  <button onClick={() => {
-                    const d = document.getElementById(`t-d-${obj.id}`) as HTMLInputElement;
-                    const r = document.getElementById(`t-r-${obj.id}`) as HTMLInputElement;
-                    const t = document.getElementById(`t-t-${obj.id}`) as HTMLInputElement;
-                    if(d.value) { addItem('tasks', { id: Date.now().toString(), objectiveId: obj.id, description: d.value, responsibility: r.value, resources: t.value, timeline: t.value }); d.value=''; r.value=''; t.value=''; }
-                  }} className="w-full bg-amber-500 text-slate-950 font-black rounded-xl py-4 hover:bg-amber-400 shadow-lg">הוסף משימה</button>
-                </div>
+                <div className="space-y-2"><label className="text-[10px] text-slate-500 uppercase font-black tracking-widest mr-2">מה המשימה?</label><input id={`t-d-${obj.id}`} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-sm text-slate-200" placeholder="תיאור המשימה..." /></div>
+                <div className="space-y-2"><label className="text-[10px] text-slate-500 uppercase font-black tracking-widest mr-2">מי האחראי?</label><input id={`t-r-${obj.id}`} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-sm text-slate-200" placeholder="שם האחראי..." /></div>
+                <div className="space-y-2"><label className="text-[10px] text-slate-500 uppercase font-black tracking-widest mr-2">לו''ז ומשאבים</label><input id={`t-t-${obj.id}`} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-sm text-slate-200" placeholder="מתי ועם מה?" /></div>
+                <div className="flex items-end"><button onClick={() => { const d = document.getElementById(`t-d-${obj.id}`) as HTMLInputElement; const r = document.getElementById(`t-r-${obj.id}`) as HTMLInputElement; const t = document.getElementById(`t-t-${obj.id}`) as HTMLInputElement; if(d.value) { addItem('tasks', { id: Date.now().toString(), objectiveId: obj.id, description: d.value, responsibility: r.value, resources: t.value, timeline: t.value }); d.value=''; r.value=''; t.value=''; } }} className="w-full bg-amber-500 text-slate-950 font-black rounded-xl py-4 hover:bg-amber-400 shadow-lg">הוסף משימה</button></div>
               </div>
               <div className="space-y-4">
                 {data.tasks.filter(t => t.objectiveId === obj.id).map(task => (
-                  <div key={task.id} className="flex justify-between items-center bg-slate-950/60 p-6 rounded-2xl border border-slate-800 hover:border-amber-500/20 transition-all text-sm shadow-md">
+                  <div key={task.id} className="flex justify-between items-center bg-slate-950/60 p-6 rounded-2xl border border-slate-800 text-sm shadow-md">
                     <div className="flex gap-8 items-center flex-1">
                       <span className="font-black text-slate-100 min-w-[200px]">{task.description}</span>
                       <div className="flex items-center gap-3 text-slate-400 bg-slate-900 px-4 py-2 rounded-xl border border-slate-800"><User className="w-4 h-4 text-amber-500/50"/> {task.responsibility || '-'}</div>
@@ -442,31 +443,21 @@ function renderStepContent(step: Step, data: WorkPlanData, setData: any, finalAi
       return (
         <div className="space-y-12">
           <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-slate-800 pb-10">
-            <div>
-              <h2 className="text-4xl font-black text-white mb-2">מסמך תוכנית עבודה שנתית</h2>
-              <p className="text-slate-500">שירות פסיכולוגי חינוכי - גרסת מנהל אסטרטגית</p>
-            </div>
+            <div><h2 className="text-4xl font-black text-white mb-2">מסמך תוכנית עבודה שנתית</h2><p className="text-slate-500">שירות פסיכולוגי חינוכי - גרסת מנהל אסטרטגית</p></div>
             <div className="flex p-1.5 bg-slate-950 rounded-2xl border border-slate-800">
               <button onClick={() => setActiveTab('original')} className={`px-8 py-3 rounded-xl text-sm font-black transition-all ${activeTab==='original'?'bg-slate-800 text-white shadow-xl':'text-slate-600'}`}>הטיוטה הגולמית</button>
               <button onClick={() => setActiveTab('ai')} className={`px-8 py-3 rounded-xl text-sm font-black flex items-center gap-2 transition-all ${activeTab==='ai'?'bg-amber-500 text-slate-950 shadow-xl':'text-slate-600 hover:text-amber-500'}`}><Sparkles className="w-4 h-4"/> גרסת ה-Master (AI)</button>
             </div>
           </div>
-
-          <div className="glass-card rounded-[3.5rem] p-10 md:p-20 shadow-2xl relative overflow-hidden bg-slate-950/40 border border-slate-800">
+          <div className="glass-card rounded-[3.5rem] p-10 md:p-20 shadow-2xl relative overflow-hidden bg-slate-950/40 border border-slate-800 min-h-[500px]">
             {activeTab === 'original' ? (
               <div className="space-y-16">
-                <section className="text-center max-w-4xl mx-auto">
-                  <h4 className="text-amber-500 font-black text-[10px] uppercase tracking-[0.4em] mb-8">חזון השירות</h4>
-                  <p className="text-5xl font-serif italic text-white leading-tight">"{data.vision || 'לא הוגדר חזון'}"</p>
-                </section>
-
+                <section className="text-center max-w-4xl mx-auto"><h4 className="text-amber-500 font-black text-[10px] uppercase tracking-[0.4em] mb-8">חזון השירות</h4><p className="text-5xl font-serif italic text-white leading-tight">"{data.vision || 'לא הוגדר חזון'}"</p></section>
                 <section>
                    <h4 className="text-amber-500 font-black text-[10px] uppercase tracking-[0.4em] mb-10">טבלת משימות ויעדים</h4>
                    <div className="overflow-x-auto rounded-[3rem] border border-slate-800 shadow-2xl">
                      <table className="w-full text-sm">
-                       <thead className="bg-slate-900 text-slate-400">
-                         <tr><th className="p-8 text-right font-black uppercase tracking-widest text-[11px]">יעד SMART</th><th className="p-8 text-right font-black uppercase tracking-widest text-[11px]">משימה אופרטיבית</th><th className="p-8 text-right font-black uppercase tracking-widest text-[11px]">אחריות</th><th className="p-8 text-right font-black uppercase tracking-widest text-[11px]">לו''ז</th></tr>
-                       </thead>
+                       <thead className="bg-slate-900 text-slate-400"><tr><th className="p-8 text-right font-black uppercase tracking-widest text-[11px]">יעד SMART</th><th className="p-8 text-right font-black uppercase tracking-widest text-[11px]">משימה אופרטיבית</th><th className="p-8 text-right font-black uppercase tracking-widest text-[11px]">אחריות</th><th className="p-8 text-right font-black uppercase tracking-widest text-[11px]">לו''ז</th></tr></thead>
                        <tbody>
                         {data.objectives.map(obj => {
                           const objTasks = data.tasks.filter(t => t.objectiveId === obj.id);
@@ -482,7 +473,6 @@ function renderStepContent(step: Step, data: WorkPlanData, setData: any, finalAi
                      </table>
                    </div>
                 </section>
-                
                 <section className="p-12 bg-red-500/5 rounded-[3rem] border border-red-500/10">
                   <h4 className="text-red-400 font-black text-[11px] uppercase tracking-[0.4em] mb-6">ניהול אילוצים וסיכונים</h4>
                   <p className="text-slate-300 leading-relaxed text-lg whitespace-pre-wrap">{data.constraints || 'לא הוגדרו אילוצים'}</p>
@@ -490,34 +480,16 @@ function renderStepContent(step: Step, data: WorkPlanData, setData: any, finalAi
               </div>
             ) : (
               <div className="animate-in fade-in duration-1000">
-                {finalAiReport ? (
-                  <div className="prose prose-invert max-w-none prose-amber p-4" dangerouslySetInnerHTML={{ __html: formatMarkdown(finalAiReport) }} />
-                ) : (
+                {finalAiReport ? <div className="prose prose-invert max-w-none prose-amber p-4" dangerouslySetInnerHTML={{ __html: formatMarkdown(finalAiReport) }} /> : (
                   <div className="flex flex-col items-center justify-center h-[500px] space-y-10">
-                    <div className="relative">
-                      <div className="animate-ping absolute inset-0 bg-amber-500 opacity-20 rounded-full" />
-                      <div className="relative p-8 bg-amber-500/20 rounded-full border border-amber-500/30 shadow-[0_0_50px_rgba(245,158,11,0.2)]">
-                        <Sparkles className="w-16 h-16 text-amber-500 animate-pulse" />
-                      </div>
-                    </div>
-                    <div className="text-center space-y-4">
-                      <p className="text-3xl font-black text-white">בונה את גרסת המאסטר...</p>
-                      <p className="text-slate-500 italic max-w-md mx-auto">ה-AI משלב את הרקע, ניתוח ה-SWOT והמטרות לכדי מסמך אסטרטגי שלם ומקצועי.</p>
-                    </div>
+                    <div className="relative"><div className="animate-ping absolute inset-0 bg-amber-500 opacity-20 rounded-full" /><div className="relative p-8 bg-amber-500/20 rounded-full border border-amber-500/30 shadow-[0_0_50px_rgba(245,158,11,0.2)]"><Sparkles className="w-16 h-16 text-amber-500 animate-pulse" /></div></div>
+                    <div className="text-center space-y-4"><p className="text-3xl font-black text-white">בונה את גרסת המאסטר...</p><p className="text-slate-500 italic max-w-md mx-auto">ה-AI משלב את הרקע, ניתוח ה-SWOT והמטרות לכדי מסמך אסטרטגי שלם ומקצועי.</p></div>
                   </div>
                 )}
               </div>
             )}
           </div>
-          
-          <div className="flex justify-center pt-10 no-print">
-            <button 
-              onClick={() => window.print()} 
-              className="flex items-center gap-5 bg-white text-slate-950 hover:bg-amber-500 transition-all px-16 py-6 rounded-[2.5rem] font-black shadow-2xl group active:scale-95"
-            >
-              <Save className="group-hover:scale-110 transition-transform" /> הדפס וייצא תוכנית אסטרטגית
-            </button>
-          </div>
+          <div className="flex justify-center pt-10 no-print"><button onClick={() => window.print()} className="flex items-center gap-5 bg-white text-slate-950 hover:bg-amber-500 transition-all px-16 py-6 rounded-[2.5rem] font-black shadow-2xl group active:scale-95"><Save className="group-hover:scale-110 transition-transform" /> הדפס וייצא תוכנית אסטרטגית</button></div>
         </div>
       );
     default: return null;
@@ -532,7 +504,6 @@ function formatMarkdown(text: string) {
     .replace(/^\* (.*$)/gim, '<li class="mr-10 mb-4 text-slate-300 text-lg">$1</li>')
     .replace(/\*\*(.*)\*\*/gim, '<strong class="text-white font-black">$1</strong>')
     .replace(/\n/g, '<br />');
-
   if (text.includes('|')) {
     const lines = text.split('\n');
     let tableHtml = '<div class="overflow-x-auto my-12 rounded-[3rem] border border-slate-800 shadow-2xl overflow-hidden"><table class="w-full border-collapse bg-slate-950/40 text-xs">';
@@ -547,7 +518,6 @@ function formatMarkdown(text: string) {
       }
     });
     tableHtml += '</table></div>';
-    
     const firstTableLine = lines.findIndex(l => l.includes('|'));
     let lastTableLine = -1;
     for (let i = lines.length - 1; i >= 0; i--) { if (lines[i] && lines[i].includes('|')) { lastTableLine = i; break; } }
