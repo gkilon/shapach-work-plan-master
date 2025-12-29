@@ -2,8 +2,11 @@
 import { GoogleGenAI } from "@google/genai";
 import { WorkPlanData } from "./types";
 
+/**
+ * Executes a text generation task using the Gemini 3 Flash model.
+ * The API key is sourced from process.env.API_KEY as per instructions.
+ */
 export const getStepSuggestions = async (stepIndex: number, currentData: Partial<WorkPlanData>) => {
-  // Always create a new instance to ensure we use the current process.env.API_KEY
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
   
   const stepContext = [
@@ -39,6 +42,9 @@ export const getStepSuggestions = async (stepIndex: number, currentData: Partial
   }
 };
 
+/**
+ * Integrates all gathered workshop data into a final strategic document.
+ */
 export const generateFinalIntegration = async (data: WorkPlanData) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
   
@@ -63,7 +69,7 @@ export const generateFinalIntegration = async (data: WorkPlanData) => {
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview',
       contents: prompt,
     });
     

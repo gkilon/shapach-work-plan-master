@@ -4,7 +4,7 @@ import {
   ChevronRight, ChevronLeft, Sparkles, Target, ShieldAlert, Eye, 
   ListTodo, TrendingUp, BrainCircuit, Save, Trash2, Calendar, 
   User, AlertCircle, FileText, Zap, CheckCircle2, Info, Lightbulb,
-  Map, MessageSquare, Quote, PlayCircle, Award, Key
+  Map, MessageSquare, Quote, PlayCircle, Award
 } from 'lucide-react';
 import { Step, STEP_NAMES, WorkPlanData, SwotData, SmartObjective, Task, METHODOLOGY_GUIDANCE, WORKSHOP_STOPS } from './types';
 import { getStepSuggestions, generateFinalIntegration } from './geminiService';
@@ -25,32 +25,6 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'original' | 'ai'>('original');
   const [showWorkshopStop, setShowWorkshopStop] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasKey, setHasKey] = useState(false);
-
-  // Check if API key is already available or needs to be selected
-  useEffect(() => {
-    const checkKey = async () => {
-      if (process.env.API_KEY) {
-        setHasKey(true);
-      } else if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
-        const selected = await window.aistudio.hasSelectedApiKey();
-        setHasKey(selected);
-      }
-    };
-    checkKey();
-  }, []);
-
-  const handleConnectKey = async () => {
-    if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
-      await window.aistudio.openSelectKey();
-      // Assume success and move forward as per race condition guidelines
-      setHasKey(true);
-      setError(null);
-    } else {
-      // For Netlify deployment, if they haven't set it correctly, we show a fallback message
-      setError("נדרשת הגדרת API KEY במערכת. אם אתה המנהל, וודא שהגדרת את המפתח ב-Environment Variables.");
-    }
-  };
 
   const nextStep = () => {
     const nextS = currentStep + 1;
@@ -72,11 +46,10 @@ export default function App() {
       setAiSuggestions(suggestion);
     } catch (err: any) {
       console.error(err);
-      if (err.message?.includes("API Key")) {
-        setError("מפתח ה-API לא הוגדר כראוי. אנא התחבר מחדש.");
-        setHasKey(false);
+      if (err.message?.includes("API Key") || err.message?.includes("set when running")) {
+        setError("שגיאה: מפתח ה-API לא הוגדר כראוי בשרת. וודא שהגדרת API_KEY ב-Netlify.");
       } else {
-        setError("חלה שגיאה בחיבור לבינה המלאכותית.");
+        setError("חלה שגיאה בתקשורת עם ה-AI.");
       }
     } finally {
       setLoadingAi(false);
@@ -84,23 +57,25 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (isStarted && currentStep === Step.SUMMARY) { handleFinalIntegration(); }
-    else { setAiSuggestions(''); }
+    if (isStarted && currentStep === Step.SUMMARY) {
+      const runReport = async () => {
+        setLoadingAi(true);
+        setError(null);
+        try {
+          const report = await generateFinalIntegration(data);
+          setFinalAiReport(report);
+        } catch (err: any) {
+          setError("נכשלנו ביצירת האינטגרציה הסופית. וודא שמפתח ה-API תקין.");
+        } finally {
+          setLoadingAi(false);
+        }
+      };
+      runReport();
+    } else {
+      setAiSuggestions('');
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentStep, isStarted]);
-
-  const handleFinalIntegration = async () => {
-    setLoadingAi(true);
-    setError(null);
-    try {
-      const report = await generateFinalIntegration(data);
-      setFinalAiReport(report);
-    } catch (err: any) {
-      setError("נכשלנו ביצירת האינטגרציה הסופית. וודא שמפתח ה-API שלך תומך ב-Gemini Pro.");
-    } finally {
-      setLoadingAi(false);
-    }
-  };
 
   if (!isStarted) {
     return (
@@ -123,26 +98,13 @@ export default function App() {
               </p>
             </div>
 
-            <div className="flex flex-col gap-4 w-full items-center">
-              {!hasKey ? (
-                <button 
-                  onClick={handleConnectKey}
-                  className="flex items-center gap-4 px-12 py-5 bg-amber-500 text-slate-950 font-black text-xl rounded-2xl shadow-2xl hover:bg-amber-400 transition-all active:scale-95"
-                >
-                  <Key className="w-6 h-6" /> התחברות מאובטחת לבינה מלאכותית
-                </button>
-              ) : (
-                <button 
-                  onClick={() => setIsStarted(true)}
-                  className="group relative flex items-center gap-4 px-16 py-6 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-2xl rounded-[2.5rem] transition-all shadow-[0_20px_50px_rgba(245,158,11,0.3)] active:scale-95 overflow-hidden"
-                >
-                  <span className="relative z-10">בואו נתחיל</span>
-                  <PlayCircle className="relative z-10 w-8 h-8 group-hover:translate-x-[-8px] transition-transform" />
-                </button>
-              )}
-              
-              {error && <p className="text-red-400 text-sm font-bold bg-red-400/10 px-4 py-2 rounded-lg border border-red-400/20">{error}</p>}
-            </div>
+            <button 
+              onClick={() => setIsStarted(true)}
+              className="group relative flex items-center gap-4 px-16 py-6 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-2xl rounded-[2.5rem] transition-all shadow-[0_20px_50px_rgba(245,158,11,0.3)] active:scale-95 overflow-hidden"
+            >
+              <span className="relative z-10">בואו נתחיל</span>
+              <PlayCircle className="relative z-10 w-8 h-8 group-hover:translate-x-[-8px] transition-transform" />
+            </button>
             
             <p className="text-slate-500 text-sm font-medium">פותח במיוחד עבור מנהלי שירותים פסיכולוגיים בישראל</p>
           </div>
@@ -272,7 +234,7 @@ export default function App() {
             </div>
             
             {error && (
-              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-xs flex items-center gap-2">
+              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-xs flex items-center gap-2 animate-in slide-in-from-right">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -419,7 +381,7 @@ function renderStepContent(step: Step, data: WorkPlanData, setData: any, finalAi
           {data.objectives.map(obj => (
             <div key={obj.id} className="p-10 border border-slate-800 rounded-[3rem] bg-slate-950/20 shadow-xl">
               <div className="flex items-center gap-4 mb-10 pb-6 border-b border-slate-900">
-                <ListTodo className="text-amber-500 w-6 h-6" />
+                <Target className="text-amber-500 w-6 h-6" />
                 <h4 className="font-black text-xl text-white">יעד: {obj.text}</h4>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
