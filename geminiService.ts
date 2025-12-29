@@ -2,12 +2,12 @@
 import { GoogleGenAI } from "@google/genai";
 import { WorkPlanData } from "./types";
 
-/**
- * Executes a text generation task using the Gemini 3 Flash model.
- * The API key is sourced from process.env.API_KEY as per instructions.
- */
 export const getStepSuggestions = async (stepIndex: number, currentData: Partial<WorkPlanData>) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  // Always create a new instance inside the function to get the latest process.env.API_KEY
+  if (!process.env.API_KEY) throw new Error("API key is missing. Please connect your API key.");
+
+  // Using process.env.API_KEY directly in the constructor as per guidelines.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const stepContext = [
     "Environmental and background mapping for a psychological service (SHAPACH).",
@@ -42,11 +42,11 @@ export const getStepSuggestions = async (stepIndex: number, currentData: Partial
   }
 };
 
-/**
- * Integrates all gathered workshop data into a final strategic document.
- */
 export const generateFinalIntegration = async (data: WorkPlanData) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  if (!process.env.API_KEY) throw new Error("API key is missing.");
+
+  // Using process.env.API_KEY directly in the constructor as per guidelines.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const prompt = `משימה: בנה תוכנית עבודה שנתית אסטרטגית (SHAPACH Master Work Plan) עבור מנהל השירות.
   עליך לבצע אינטגרציה מלאה בין הרקע הסביבתי, ה-SWOT, החזון, המטרות והמשימות.
@@ -69,7 +69,7 @@ export const generateFinalIntegration = async (data: WorkPlanData) => {
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: prompt,
     });
     

@@ -1,6 +1,14 @@
 
-/* Essential styles to prevent 404 resource errors */
+/* Essential styles for the app */
 body {
   margin: 0;
   padding: 0;
+  background-color: #020617;
+  color: #f8fafc;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
 }

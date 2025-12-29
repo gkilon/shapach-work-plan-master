@@ -4,7 +4,7 @@ import {
   ChevronRight, ChevronLeft, Sparkles, Target, ShieldAlert, Eye, 
   ListTodo, TrendingUp, BrainCircuit, Save, Trash2, Calendar, 
   User, AlertCircle, FileText, Zap, CheckCircle2, Info, Lightbulb,
-  Map, MessageSquare, Quote, PlayCircle, Award
+  Map, MessageSquare, Quote, PlayCircle, Award, Key
 } from 'lucide-react';
 import { Step, STEP_NAMES, WorkPlanData, SwotData, SmartObjective, Task, METHODOLOGY_GUIDANCE, WORKSHOP_STOPS } from './types';
 import { getStepSuggestions, generateFinalIntegration } from './geminiService';
@@ -14,6 +14,18 @@ const initialPlan: WorkPlanData = {
   selfContext: '', swot: initialSwot, 
   vision: '', highLevelGoals: [], objectives: [], tasks: [], constraints: ''
 };
+
+// Fixed the window.aistudio declaration to match identical modifiers and the AIStudio type required by the environment.
+declare global {
+  interface AIStudio {
+    hasSelectedApiKey: () => Promise<boolean>;
+    openSelectKey: () => Promise<void>;
+  }
+
+  interface Window {
+    readonly aistudio: AIStudio;
+  }
+}
 
 export default function App() {
   const [isStarted, setIsStarted] = useState(false);
@@ -25,6 +37,36 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'original' | 'ai'>('original');
   const [showWorkshopStop, setShowWorkshopStop] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasApiKey, setHasApiKey] = useState(false);
+
+  // Check if API key is selected on load
+  useEffect(() => {
+    const checkKey = async () => {
+      // In some environments, process.env.API_KEY is pre-injected
+      if (process.env.API_KEY) {
+        setHasApiKey(true);
+        return;
+      }
+      
+      // Check for window.aistudio helper
+      if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
+        const selected = await window.aistudio.hasSelectedApiKey();
+        setHasApiKey(selected);
+      }
+    };
+    checkKey();
+  }, []);
+
+  const handleOpenKeySelector = async () => {
+    if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
+      await window.aistudio.openSelectKey();
+      // Assume success as per guidelines race condition mitigation
+      setHasApiKey(true);
+      setError(null);
+    } else {
+      setError("בורר המפתחות אינו זמין בסביבה זו.");
+    }
+  };
 
   const nextStep = () => {
     const nextS = currentStep + 1;
@@ -46,8 +88,9 @@ export default function App() {
       setAiSuggestions(suggestion);
     } catch (err: any) {
       console.error(err);
-      if (err.message?.includes("API Key") || err.message?.includes("set when running")) {
-        setError("שגיאה: מפתח ה-API לא הוגדר כראוי בשרת. וודא שהגדרת API_KEY ב-Netlify.");
+      if (err.message?.includes("API key")) {
+        setHasApiKey(false);
+        setError("מפתח ה-API חסר. יש להתחבר מחדש.");
       } else {
         setError("חלה שגיאה בתקשורת עם ה-AI.");
       }
@@ -58,19 +101,19 @@ export default function App() {
 
   useEffect(() => {
     if (isStarted && currentStep === Step.SUMMARY) {
-      const runReport = async () => {
+      const runFinalReport = async () => {
         setLoadingAi(true);
         setError(null);
         try {
           const report = await generateFinalIntegration(data);
           setFinalAiReport(report);
         } catch (err: any) {
-          setError("נכשלנו ביצירת האינטגרציה הסופית. וודא שמפתח ה-API תקין.");
+          setError("נכשלנו ביצירת האינטגרציה הסופית.");
         } finally {
           setLoadingAi(false);
         }
       };
-      runReport();
+      runFinalReport();
     } else {
       setAiSuggestions('');
     }
@@ -98,13 +141,29 @@ export default function App() {
               </p>
             </div>
 
-            <button 
-              onClick={() => setIsStarted(true)}
-              className="group relative flex items-center gap-4 px-16 py-6 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-2xl rounded-[2.5rem] transition-all shadow-[0_20px_50px_rgba(245,158,11,0.3)] active:scale-95 overflow-hidden"
-            >
-              <span className="relative z-10">בואו נתחיל</span>
-              <PlayCircle className="relative z-10 w-8 h-8 group-hover:translate-x-[-8px] transition-transform" />
-            </button>
+            {!hasApiKey ? (
+              <div className="space-y-4">
+                <button 
+                  onClick={handleOpenKeySelector}
+                  className="flex items-center gap-4 px-12 py-5 bg-amber-500 text-slate-950 font-black text-xl rounded-2xl shadow-2xl hover:bg-amber-400 transition-all active:scale-95"
+                >
+                  <Key className="w-6 h-6" /> התחברות מאובטחת לבינה מלאכותית
+                </button>
+                <p className="text-xs text-slate-500 italic max-w-xs mx-auto">
+                  יש לבחור מפתח API פעיל מתוך פרויקט GCP בתשלום כדי להפעיל את יכולות ה-AI המלאות.
+                </p>
+              </div>
+            ) : (
+              <button 
+                onClick={() => setIsStarted(true)}
+                className="group relative flex items-center gap-4 px-16 py-6 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-2xl rounded-[2.5rem] transition-all shadow-[0_20px_50px_rgba(245,158,11,0.3)] active:scale-95 overflow-hidden"
+              >
+                <span className="relative z-10">בואו נתחיל</span>
+                <PlayCircle className="relative z-10 w-8 h-8 group-hover:translate-x-[-8px] transition-transform" />
+              </button>
+            )}
+
+            {error && <p className="text-red-400 font-bold bg-red-400/10 px-6 py-3 rounded-2xl border border-red-400/20">{error}</p>}
             
             <p className="text-slate-500 text-sm font-medium">פותח במיוחד עבור מנהלי שירותים פסיכולוגיים בישראל</p>
           </div>
