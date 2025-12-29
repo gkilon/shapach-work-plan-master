@@ -7,11 +7,9 @@ import { WorkPlanData } from "./types";
  * Uses the environment-injected API_KEY.
  */
 const getAI = () => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    throw new Error("An API Key must be set. Please use the 'Connect API Key' button in the interface.");
-  }
-  return new GoogleGenAI({ apiKey });
+  // Directly use the environment variable as per instructions.
+  // Must use a named parameter: { apiKey: process.env.API_KEY }
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 export const getStepSuggestions = async (stepIndex: number, currentData: Partial<WorkPlanData>) => {
@@ -42,11 +40,8 @@ export const getStepSuggestions = async (stepIndex: number, currentData: Partial
       contents: prompt,
     });
     
-    if (!response.text) {
-      throw new Error("No response from AI model.");
-    }
-    
-    return response.text;
+    // .text is a property, not a method
+    return response.text || "לא התקבל מענה מהמודל.";
   } catch (error: any) {
     console.error("AI Error Details:", error);
     throw error;
@@ -80,11 +75,8 @@ export const generateFinalIntegration = async (data: WorkPlanData) => {
       contents: prompt,
     });
     
-    if (!response.text) {
-      throw new Error("Final report generation failed.");
-    }
-    
-    return response.text;
+    // .text is a property, not a method
+    return response.text || "לא ניתן היה ליצור את הדוח הסופי.";
   } catch (error: any) {
     console.error("AI Integration Error Details:", error);
     throw error;

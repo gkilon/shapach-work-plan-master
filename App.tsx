@@ -4,7 +4,7 @@ import {
   ChevronRight, ChevronLeft, Sparkles, Target, ShieldAlert, Eye, 
   ListTodo, TrendingUp, BrainCircuit, Save, Trash2, Calendar, 
   User, AlertCircle, FileText, Zap, CheckCircle2, Info, Lightbulb,
-  Map, MessageSquare, Quote, PlayCircle, Award, Key
+  Map, MessageSquare, Quote, PlayCircle, Award
 } from 'lucide-react';
 import { Step, STEP_NAMES, WorkPlanData, SwotData, SmartObjective, Task, METHODOLOGY_GUIDANCE, WORKSHOP_STOPS } from './types';
 import { getStepSuggestions, generateFinalIntegration } from './geminiService';
@@ -15,6 +15,8 @@ const initialPlan: WorkPlanData = {
   vision: '', highLevelGoals: [], objectives: [], tasks: [], constraints: ''
 };
 
+// Removed redundant declare global for window.aistudio to fix TS error and modifiers conflict.
+
 export default function App() {
   const [isStarted, setIsStarted] = useState(false);
   const [currentStep, setCurrentStep] = useState<Step>(Step.CONTEXT);
@@ -24,26 +26,7 @@ export default function App() {
   const [finalAiReport, setFinalAiReport] = useState('');
   const [activeTab, setActiveTab] = useState<'original' | 'ai'>('original');
   const [showWorkshopStop, setShowWorkshopStop] = useState(false);
-  const [hasApiKey, setHasApiKey] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const checkKey = async () => {
-      if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
-        const selected = await window.aistudio.hasSelectedApiKey();
-        setHasApiKey(selected);
-      }
-    };
-    checkKey();
-  }, []);
-
-  const handleOpenKeySelector = async () => {
-    if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
-      await window.aistudio.openSelectKey();
-      setHasApiKey(true);
-      setError(null);
-    }
-  };
 
   const nextStep = () => {
     const nextS = currentStep + 1;
@@ -65,12 +48,7 @@ export default function App() {
       setAiSuggestions(suggestion);
     } catch (err: any) {
       console.error(err);
-      if (err.message?.includes("Requested entity was not found")) {
-        setHasApiKey(false);
-        setError("נדרש חיבור מחדש של מפתח ה-API.");
-      } else {
-        setError("חלה שגיאה בחיבור לבינה המלאכותית.");
-      }
+      setError("חלה שגיאה בחיבור לבינה המלאכותית.");
     } finally {
       setLoadingAi(false);
     }
@@ -89,7 +67,7 @@ export default function App() {
       const report = await generateFinalIntegration(data);
       setFinalAiReport(report);
     } catch (err: any) {
-      setError("נכשלנו ביצירת האינטגרציה הסופית. אנא נסה שנית.");
+      setError("נכשלנו ביצירת האינטגרציה הסופית.");
     } finally {
       setLoadingAi(false);
     }
@@ -116,26 +94,14 @@ export default function App() {
               </p>
             </div>
 
-            {!hasApiKey ? (
-              <div className="space-y-6 bg-amber-500/5 p-8 rounded-3xl border border-amber-500/20">
-                <p className="text-amber-400 font-bold">לפני שמתחילים, יש לחבר את המערכת ל-API מאובטח</p>
-                <button 
-                  onClick={handleOpenKeySelector}
-                  className="flex items-center gap-3 px-10 py-4 bg-amber-500 text-slate-950 font-black rounded-2xl shadow-xl hover:bg-amber-400 transition-all"
-                >
-                  <Key className="w-5 h-5" /> התחבר ל-Gemini API
-                </button>
-                <p className="text-[10px] text-slate-500 italic">השימוש במודל Gemini 3 Pro דורש הגדרת Billing ב-Google Cloud</p>
-              </div>
-            ) : (
-              <button 
-                onClick={() => setIsStarted(true)}
-                className="group relative flex items-center gap-4 px-16 py-6 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-2xl rounded-[2.5rem] transition-all shadow-[0_20px_50px_rgba(245,158,11,0.3)] active:scale-95 overflow-hidden"
-              >
-                <span className="relative z-10">בואו נתחיל</span>
-                <PlayCircle className="relative z-10 w-8 h-8 group-hover:translate-x-[-8px] transition-transform" />
-              </button>
-            )}
+            {/* Removed internal API key management logic for text-based tasks. API key handled externally via process.env.API_KEY. */}
+            <button 
+              onClick={() => setIsStarted(true)}
+              className="group relative flex items-center gap-4 px-16 py-6 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-2xl rounded-[2.5rem] transition-all shadow-[0_20px_50px_rgba(245,158,11,0.3)] active:scale-95 overflow-hidden"
+            >
+              <span className="relative z-10">בואו נתחיל</span>
+              <PlayCircle className="relative z-10 w-8 h-8 group-hover:translate-x-[-8px] transition-transform" />
+            </button>
             
             <p className="text-slate-500 text-sm font-medium">פותח במיוחד עבור מנהלי שירותים פסיכולוגיים בישראל</p>
           </div>
@@ -273,7 +239,7 @@ export default function App() {
 
             <button 
               onClick={fetchSuggestions} 
-              disabled={loadingAi || !hasApiKey}
+              disabled={loadingAi}
               className="w-full py-4 bg-slate-900 border border-slate-800 rounded-xl mb-6 font-bold flex items-center justify-center gap-3 hover:bg-slate-800 transition-colors shadow-inner disabled:opacity-50"
             >
               {loadingAi ? <div className="animate-spin h-5 w-5 border-b-2 border-amber-500 rounded-full" /> : <><Zap className="w-4 h-4 text-amber-500" /> קבל תובנות ושיפורים</>}
