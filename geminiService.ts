@@ -3,7 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import { WorkPlanData } from "./types";
 
 /**
- * פונקציה ליצירת מופע AI עם המפתח הנוכחי בסביבה
+ * Creates an AI client instance using the environment variable.
  */
 const getAiClient = () => {
   const apiKey = process.env.API_KEY;
@@ -30,12 +30,12 @@ export const getStepSuggestions = async (stepIndex: number, currentData: Partial
 
     const prompt = `אתה יועץ אסטרטגי בכיר למנהלי שירותים פסיכולוגיים חינוכיים (שפ"ח). 
     אנחנו בסדנה לבניית תוכנית עבודה. השלב הנוכחי: ${stepContext}. 
-    הנתונים שהוזנו: ${JSON.stringify(currentData)}. 
+    הנתונים שהוזנו עד כה: ${JSON.stringify(currentData)}. 
     
     משימה: 
-    1. ספק 2-3 תובנות ניהוליות-פסיכולוגיות מעמיקות שיעזרו למנהל לדייק את השלב הזה.
-    2. תן דוגמה לניסוח מרשים ומקצועי לאחד הפריטים בשלב הזה.
-    השתמש בשפה מעצימה, יוקרתית ומקצועית.`;
+    1. ספק 2-3 תובנות ניהוליות-פסיכולוגיות מעמיקות שיעזרו למנהל לדייק את השלב הזה בצורה מקצועית.
+    2. תן דוגמה לניסוח מרשים ומקצועי לאחד הפריטים בשלב הזה (חזון/מטרה/יעד/משימה).
+    השתמש בשפה מעצימה, יוקרתית ומקצועית המתאימה לפסיכולוגים ומנהלים.`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -44,7 +44,7 @@ export const getStepSuggestions = async (stepIndex: number, currentData: Partial
     
     return response.text || "לא התקבל מענה מהמודל.";
   } catch (error: any) {
-    if (error.message === "API_KEY_MISSING") throw new Error("מפתח ה-API לא נמצא במערכת.");
+    if (error.message === "API_KEY_MISSING") throw new Error("מפתח ה-API חסר. יש להגדיר API_KEY במשתני הסביבה של Netlify.");
     console.error("AI Error:", error);
     throw error;
   }
@@ -54,25 +54,26 @@ export const generateFinalIntegration = async (data: WorkPlanData) => {
   try {
     const ai = getAiClient();
     
-    const prompt = `משימה: בנה תוכנית עבודה שנתית אסטרטגית מקיפה עבור מנהל שפ"ח.
-    בצע אינטגרציה מלאה בין הרקע, ה-SWOT, החזון, המטרות והמשימות. התייחס גם לאילוצים שהוגדרו.
+    const prompt = `משימה: בנה תוכנית עבודה שנתית אסטרטגית מקיפה ומלוטשת עבור מנהל שפ"ח על בסיס כל הנתונים שנאספו בסדנה.
+    בצע אינטגרציה מלאה בין הרקע, ה-SWOT, החזון, המטרות והמשימות. התייחס גם לאילוצים ולחסמים שהוגדרו.
     
     נתונים: ${JSON.stringify(data)}.
     
     הפלט חייב להיות בפורמט Markdown הכולל:
-    1. סיכום מנהלים אסטרטגי.
-    2. חזון השירות המלוטש.
-    3. טבלה מרשימה: מטרה -> יעד -> משימה -> אחריות -> לו"ז -> מענה לאילוץ.
-    4. המלצות לניהול השינוי בתוך הצוות.
+    1. סיכום מנהלים אסטרטגי (Executive Summary).
+    2. החזון המקצועי המזוקק.
+    3. טבלת תוכנית עבודה מרשימה בפורמט "אקסל" (טבלת Markdown) הכוללת עמודות עבור: 
+       מטרה אסטרטגית | יעד SMART | משימה אופרטיבית | אחריות | לו"ז ומשאבים | מענה לאילוצים/חסמים.
+    4. המלצות לניהול השינוי בתוך הצוות ודגשים ליישום.
     
-    שפה: עברית גבוהה, ניהולית, מקצועית.`;
+    שפה: עברית גבוהה, ניהולית, מקצועית ומרשימה.`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: prompt,
     });
     
-    return response.text || "לא ניתן היה ליצור את הדוח.";
+    return response.text || "לא ניתן היה ליצור את האינטגרציה הסופית.";
   } catch (error: any) {
     console.error("Integration Error:", error);
     throw error;
