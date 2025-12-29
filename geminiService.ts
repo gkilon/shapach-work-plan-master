@@ -2,18 +2,10 @@
 import { GoogleGenAI } from "@google/genai";
 import { WorkPlanData } from "./types";
 
-/**
- * Creates a fresh instance of the Gemini API client.
- * Uses the environment-injected API_KEY.
- */
-const getAI = () => {
-  // Directly use the environment variable as per instructions.
-  // Must use a named parameter: { apiKey: process.env.API_KEY }
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
-};
-
 export const getStepSuggestions = async (stepIndex: number, currentData: Partial<WorkPlanData>) => {
-  const ai = getAI();
+  // Always create a new instance to ensure we use the current process.env.API_KEY
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  
   const stepContext = [
     "Environmental and background mapping for a psychological service (SHAPACH).",
     "SWOT Analysis - Strengths, Weaknesses, Opportunities, Threats for the unit.",
@@ -40,16 +32,16 @@ export const getStepSuggestions = async (stepIndex: number, currentData: Partial
       contents: prompt,
     });
     
-    // .text is a property, not a method
     return response.text || "לא התקבל מענה מהמודל.";
   } catch (error: any) {
-    console.error("AI Error Details:", error);
+    console.error("AI Error:", error);
     throw error;
   }
 };
 
 export const generateFinalIntegration = async (data: WorkPlanData) => {
-  const ai = getAI();
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  
   const prompt = `משימה: בנה תוכנית עבודה שנתית אסטרטגית (SHAPACH Master Work Plan) עבור מנהל השירות.
   עליך לבצע אינטגרציה מלאה בין הרקע הסביבתי, ה-SWOT, החזון, המטרות והמשימות.
   
@@ -75,10 +67,9 @@ export const generateFinalIntegration = async (data: WorkPlanData) => {
       contents: prompt,
     });
     
-    // .text is a property, not a method
     return response.text || "לא ניתן היה ליצור את הדוח הסופי.";
   } catch (error: any) {
-    console.error("AI Integration Error Details:", error);
+    console.error("AI Integration Error:", error);
     throw error;
   }
 };
