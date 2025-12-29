@@ -2,34 +2,41 @@
 import { GoogleGenAI } from "@google/genai";
 import { WorkPlanData } from "./types";
 
+/**
+ * פונקציה ליצירת מופע AI עם המפתח הנוכחי בסביבה
+ */
+const getAiClient = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("API_KEY_MISSING");
+  }
+  return new GoogleGenAI({ apiKey });
+};
+
 export const getStepSuggestions = async (stepIndex: number, currentData: Partial<WorkPlanData>) => {
-  // Always create a new instance inside the function to get the latest process.env.API_KEY
-  if (!process.env.API_KEY) throw new Error("API key is missing. Please connect your API key.");
-
-  // Using process.env.API_KEY directly in the constructor as per guidelines.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
-  const stepContext = [
-    "Environmental and background mapping for a psychological service (SHAPACH).",
-    "SWOT Analysis - Strengths, Weaknesses, Opportunities, Threats for the unit.",
-    "Vision building for the SHAPACH - where do we want to be?",
-    "Strategic Goals setting - the main pillars for next year.",
-    "Defining SMART objectives for each strategic goal.",
-    "Detailed task management - turning goals into action.",
-    "Risk assessment and management of constraints.",
-    "Final plan integration and roadmap construction."
-  ][stepIndex];
-
-  const prompt = `אתה יועץ אסטרטגי מומחה לניהול שירותים פסיכולוגיים חינוכיים (שפ"ח). 
-  אנחנו נמצאים בסדנה לבניית תוכנית עבודה. השלב הנוכחי הוא: ${stepContext}. 
-  הנתונים שהוזנו עד כה: ${JSON.stringify(currentData)}. 
-  
-  משימה: 
-  1. ספק 2-3 תובנות עמוקות ופרקטיות שיעזרו למנהל למלא את השלב הזה בצורה מקצועית יותר.
-  2. תן דוגמה לניסוח איכותי של אחד הפריטים בשלב הזה (חזון/מטרה/יעד וכו') בהתאם להקשר שהמשתמש הזין.
-  3. השתמש בשפה ניהולית-פסיכולוגית מרהיבה ומעצימה.`;
-
   try {
+    const ai = getAiClient();
+    
+    const stepContext = [
+      "מיפוי ורקע סביבתי לשפ\"ח",
+      "ניתוח SWOT - חוזקות, חולשות, הזדמנויות ואיומים",
+      "בניית חזון ליחידה - לאן אנחנו שואפים?",
+      "הגדרת מטרות אסטרטגיות לשנה הקרובה",
+      "ניסוח יעדי SMART מדידים",
+      "ניהול משימות מפורט ותוכנית אופרטיבית",
+      "אילוצים, חסמים וניהול סיכונים",
+      "אינטגרציה סופית ובניית תוכנית עבודה"
+    ][stepIndex];
+
+    const prompt = `אתה יועץ אסטרטגי בכיר למנהלי שירותים פסיכולוגיים חינוכיים (שפ"ח). 
+    אנחנו בסדנה לבניית תוכנית עבודה. השלב הנוכחי: ${stepContext}. 
+    הנתונים שהוזנו: ${JSON.stringify(currentData)}. 
+    
+    משימה: 
+    1. ספק 2-3 תובנות ניהוליות-פסיכולוגיות מעמיקות שיעזרו למנהל לדייק את השלב הזה.
+    2. תן דוגמה לניסוח מרשים ומקצועי לאחד הפריטים בשלב הזה.
+    השתמש בשפה מעצימה, יוקרתית ומקצועית.`;
+
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
@@ -37,45 +44,37 @@ export const getStepSuggestions = async (stepIndex: number, currentData: Partial
     
     return response.text || "לא התקבל מענה מהמודל.";
   } catch (error: any) {
+    if (error.message === "API_KEY_MISSING") throw new Error("מפתח ה-API לא נמצא במערכת.");
     console.error("AI Error:", error);
     throw error;
   }
 };
 
 export const generateFinalIntegration = async (data: WorkPlanData) => {
-  if (!process.env.API_KEY) throw new Error("API key is missing.");
-
-  // Using process.env.API_KEY directly in the constructor as per guidelines.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
-  const prompt = `משימה: בנה תוכנית עבודה שנתית אסטרטגית (SHAPACH Master Work Plan) עבור מנהל השירות.
-  עליך לבצע אינטגרציה מלאה בין הרקע הסביבתי, ה-SWOT, החזון, המטרות והמשימות.
-  
-  נתונים: ${JSON.stringify(data)}.
-  
-  הפלט חייב להיות בפורמט Markdown מקצועי ויוקרתי הכולל:
-  1. סיכום מנהלים אסטרטגי המקשר בין הרקע לבין הכיוון החדש של השירות.
-  2. החזון המלוטש של השירות.
-  3. טבלת תוכנית עבודה מלאה ומרשימה הכוללת:
-     - מטרה אסטרטגית
-     - יעד SMART
-     - משימה אופרטיבית
-     - גורם אחראי
-     - לו"ז ומשאבים
-     - מענה לאילוץ אפשרי (איך מתמודדים עם חסמים שהוגדרו)
-  4. המלצות ל"ניהול שינוי" בצוות לצורך הטמעת התוכנית בצורה מיטבית.
-  
-  שפה: עברית גבוהה, מקצועית, פסיכולוגית וניהולית.`;
-
   try {
+    const ai = getAiClient();
+    
+    const prompt = `משימה: בנה תוכנית עבודה שנתית אסטרטגית מקיפה עבור מנהל שפ"ח.
+    בצע אינטגרציה מלאה בין הרקע, ה-SWOT, החזון, המטרות והמשימות. התייחס גם לאילוצים שהוגדרו.
+    
+    נתונים: ${JSON.stringify(data)}.
+    
+    הפלט חייב להיות בפורמט Markdown הכולל:
+    1. סיכום מנהלים אסטרטגי.
+    2. חזון השירות המלוטש.
+    3. טבלה מרשימה: מטרה -> יעד -> משימה -> אחריות -> לו"ז -> מענה לאילוץ.
+    4. המלצות לניהול השינוי בתוך הצוות.
+    
+    שפה: עברית גבוהה, ניהולית, מקצועית.`;
+
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: prompt,
     });
     
-    return response.text || "לא ניתן היה ליצור את הדוח הסופי.";
+    return response.text || "לא ניתן היה ליצור את הדוח.";
   } catch (error: any) {
-    console.error("AI Integration Error:", error);
+    console.error("Integration Error:", error);
     throw error;
   }
 };

@@ -1,5 +1,8 @@
 
-/* Essential styles for the app */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
   margin: 0;
   padding: 0;
@@ -11,4 +14,14 @@ body {
   .no-print {
     display: none !important;
   }
+}
+
+.luxury-gradient {
+  background: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%);
+}
+
+.glass-card {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(40px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
