@@ -1,3 +1,2 @@
-
-// הלוגיקה עברה לתוך App.tsx כדי למנוע שגיאות קומפילציה בנטליפיי
+// Logic moved to App.tsx for better stability and CSP compatibility.
 export {};

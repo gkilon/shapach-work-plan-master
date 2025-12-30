@@ -3,27 +3,52 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval';">
     <title>MIND-PLANNER | סוויטת ניהול אסטרטגי לשפ"ח</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@200;400;600;800&family=Heebo:wght@300;500;700;900&family=Bellefair&display=swap" rel="stylesheet">
     <style>
-      * { font-family: 'Assistant', sans-serif; }
-      body { background-color: #020617; color: #f8fafc; margin: 0; }
-      .luxury-gradient { background: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%); }
-      .glass-card { 
-        background: rgba(15, 23, 42, 0.7); 
-        backdrop-filter: blur(20px); 
-        border: 1px solid rgba(255, 255, 255, 0.08); 
+      :root {
+        --amber-glow: rgba(245, 158, 11, 0.4);
       }
-      .font-serif { font-family: 'Bellefair', serif !important; }
+      * {
+        font-family: 'Assistant', 'Heebo', sans-serif;
+      }
+      body {
+        background-color: #020617;
+        color: #f8fafc;
+        overflow-x: hidden;
+        margin: 0;
+      }
+      .font-serif {
+        font-family: 'Bellefair', serif !important;
+      }
+      .luxury-gradient {
+        background: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%);
+      }
+      .glass-card {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(40px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #1e293b;
+        border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #fbbf24;
+      }
       @media print {
         .no-print { display: none !important; }
         body { background: white !important; color: black !important; }
         .glass-card { border: none !important; background: transparent !important; color: black !important; box-shadow: none !important; }
+        .luxury-gradient { background: white !important; }
       }
-      .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-      .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
     </style>
     <script type="importmap">
 {
@@ -38,9 +63,11 @@
   }
 }
 </script>
-  </head>
+  <link rel="stylesheet" href="/index.css">
+</head>
   <body>
     <div id="root"></div>
     <script type="module" src="index.tsx"></script>
-  </body>
+  <script type="module" src="/index.tsx"></script>
+</body>
 </html>
