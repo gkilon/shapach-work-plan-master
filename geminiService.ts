@@ -2,7 +2,10 @@
 import { GoogleGenAI } from "@google/genai";
 import { WorkPlanData } from "./types";
 
-// פונקציית עזר לקבלת הקליינט - בדיוק לפי הדוגמה שעובדת לך
+/**
+ * פונקציה לקבלת ה-Client של Gemini.
+ * משתמשת ב-process.env.API_KEY בדיוק כפי שהוגדר בדוגמה שעובדת לך.
+ */
 const getClient = () => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
@@ -11,6 +14,9 @@ const getClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
+/**
+ * קבלת תובנות AI לשלבי הסדנה
+ */
 export const getStepSuggestions = async (stepIndex: number, currentData: Partial<WorkPlanData>) => {
   const ai = getClient();
   
@@ -25,9 +31,11 @@ export const getStepSuggestions = async (stepIndex: number, currentData: Partial
     "אינטגרציה סופית לתוכנית עבודה"
   ];
 
-  const prompt = `אתה יועץ אסטרטגי בכיר למנהלי שפ"ח. השלב הנוכחי: ${stepContexts[stepIndex]}.
-נתונים: ${JSON.stringify(currentData)}.
-משימה: תן 2-3 תובנות ניהוליות חכמות והצעה לניסוח מקצועי אחד. ענה בעברית בלבד.`;
+  const prompt = `אתה יועץ אסטרטגי בכיר למנהלי שירות פסיכולוגי חינוכי (שפ"ח). 
+  אנחנו בשלב: ${stepContexts[stepIndex]}.
+  המידע שהוזן עד כה: ${JSON.stringify(currentData)}.
+  המשימה: ספק 2-3 תובנות ניהוליות חדות והצעה אחת לניסוח מקצועי ויוקרתי לשלב זה.
+  ענה בעברית מקצועית וגבוהה בלבד.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -36,20 +44,24 @@ export const getStepSuggestions = async (stepIndex: number, currentData: Partial
     });
     return response.text;
   } catch (error: any) {
-    console.error("Gemini Error:", error);
-    if (error.message === "API_KEY_MISSING") {
-      throw new Error("מפתח ה-API חסר. יש להגדיר API_KEY במשתני הסביבה של Netlify.");
-    }
-    throw new Error("נכשלה קבלת תשובה מה-AI. נסה שנית.");
+    console.error("Gemini Step Error:", error);
+    throw new Error(error.message || "נכשלה קבלת תשובה מה-AI");
   }
 };
 
+/**
+ * יצירת דוח אינטגרציה סופי לתוכנית עבודה
+ */
 export const generateFinalIntegration = async (data: WorkPlanData) => {
   const ai = getClient();
   
-  const prompt = `בנה תוכנית עבודה אסטרטגית מקיפה למנהל שפ"ח על בסיס: ${JSON.stringify(data)}.
-כלול: סיכום מנהלים, חזון, וטבלת Markdown הכוללת עמודות: מטרה | יעד | משימה | אחראי | לו"ז | מענה לאילוץ.
-ענה בעברית ניהולית גבוהה.`;
+  const prompt = `בצע אינטגרציה מלאה לתוכנית עבודה שנתית עבור מנהל שפ"ח על בסיס הנתונים הבאים: ${JSON.stringify(data)}.
+  הפק דוח מרשים בפורמט Markdown הכולל:
+  1. סיכום מנהלים אסטרטגי.
+  2. חזון השירות המזוקק.
+  3. טבלה מסודרת של המטרות והמשימות (מטרה | יעד | משימה | אחראי | לו"ז).
+  4. המלצות ליישום.
+  ענה בעברית בלבד.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -57,8 +69,8 @@ export const generateFinalIntegration = async (data: WorkPlanData) => {
       contents: prompt,
     });
     return response.text;
-  } catch (error) {
-    console.error("Final Integration Error:", error);
-    throw new Error("נכשלה יצירת האינטגרציה הסופית.");
+  } catch (error: any) {
+    console.error("Gemini Final Error:", error);
+    throw new Error(error.message || "נכשלה יצירת האינטגרציה");
   }
 };
