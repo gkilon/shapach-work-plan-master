@@ -2,23 +2,3 @@
   for = "/*"
   [headers.values]
     Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.tailwindcss.com https://generativelanguage.googleapis.com; connect-src 'self' https://generativelanguage.googleapis.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com;"
-```
-
-### שלב 4: שמור ופרסם
-1. **שמור את הקובץ**
-2. **Commit והעלה ל-GitHub/Git** (אם Google Studio מחובר)
-3. או **Deploy מחדש את האתר ב-Netlify**
-
----
-
-## אם Google Studio לא נותן לך ליצור קובץ:
-
-**אלטרנטיבה - דרך Netlify ישירות:**
-
-1. היכנס ל-**Netlify Dashboard**
-2. לך ל-**Site configuration** → **Build & deploy** → **Post processing**
-3. לחץ על **"Edit settings"** ליד Headers
-4. הוסף את הכללים האלה:
-```
-/*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.tailwindcss.com https://generativelanguage.googleapis.com; connect-src 'self' https://generativelanguage.googleapis.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com;
