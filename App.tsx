@@ -17,7 +17,7 @@ const STEP_NAMES = ['רקע ואתגרים', 'ניתוח SWOT', 'חזון ניה
 // --- AI Logic ---
 const getApiKey = () => {
   try {
-    return process.env.API_KEY || '';
+    return process.env.VITE_GEMINI_API_KEY || '';
   } catch {
     return '';
   }
