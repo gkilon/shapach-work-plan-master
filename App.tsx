@@ -3,9 +3,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   ChevronRight, ChevronLeft, Sparkles, BrainCircuit, Save, 
   Trash2, Zap, PlayCircle, RefreshCcw, Target, Lightbulb, 
-  User, Users, X, Users2, Plus, CheckCircle2, Compass, Map, ListChecks, Workflow, Quote, Laptop, PenTool, Info, BookOpen, AlertCircle
+  User, Users, X, Users2, Plus, CheckCircle2, Compass, Map, ListChecks, Workflow, Quote, Laptop, PenTool, Info, BookOpen, AlertCircle, Download
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
+import * as XLSX from 'xlsx';
 
 // --- API Key Helper ---
 const getApiKey = () => {
@@ -213,6 +214,62 @@ export default function App() {
       runFinal();
     }
   }, [currentStep, appMode, data]);
+
+  const handleExportExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Overview
+    const overviewData = [
+      ["תכנית עבודה שנתית - שפ\"ח"],
+      [""],
+      ["חזון", data.vision],
+      [""],
+      ["מטרות על"],
+      ...data.highLevelGoals.map((g, i) => [`${i + 1}. ${g}`]),
+      [""],
+      ["ניתוח SWOT"],
+      ["חוזקות", ...data.swot.strengths],
+      ["חולשות", ...data.swot.weaknesses],
+      ["הזדמנויות", ...data.swot.opportunities],
+      ["איומים", ...data.swot.threats],
+      [""],
+      ["אילוצים וניהול סיכונים", data.constraints]
+    ];
+    const wsOverview = XLSX.utils.aoa_to_sheet(overviewData);
+    // RTL direction for Hebrew
+    if(!wsOverview['!cols']) wsOverview['!cols'] = [];
+    wsOverview['!cols'] = [{ wch: 20 }, { wch: 50 }, { wch: 20 }, { wch: 20 }];
+    wsOverview['!views'] = [{ rightToLeft: true }];
+    XLSX.utils.book_append_sheet(wb, wsOverview, "מבט על");
+
+    // Sheet 2: Work Plan
+    const planRows = [["מטרת על", "יעד SMART", "משימה", "אחריות", "לו\"ז"]];
+    
+    data.highLevelGoals.forEach((goal, gIdx) => {
+      const objectives = data.objectives.filter(o => o.goalIndex === gIdx);
+      if (objectives.length === 0) {
+        planRows.push([goal, "", "", "", ""]);
+      } else {
+        objectives.forEach(obj => {
+          const tasks = data.tasks.filter(t => t.objectiveId === obj.id);
+          if (tasks.length === 0) {
+            planRows.push([goal, obj.text, "", "", ""]);
+          } else {
+            tasks.forEach(task => {
+              planRows.push([goal, obj.text, task.description, task.responsibility, task.timeline]);
+            });
+          }
+        });
+      }
+    });
+
+    const wsPlan = XLSX.utils.aoa_to_sheet(planRows);
+    wsPlan['!views'] = [{ rightToLeft: true }];
+    wsPlan['!cols'] = [{ wch: 30 }, { wch: 40 }, { wch: 40 }, { wch: 20 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(wb, wsPlan, "תכנית עבודה");
+
+    XLSX.writeFile(wb, "Shapach_Work_Plan.xlsx");
+  };
 
   const activePart = PART_METADATA.find(p => p.steps.includes(currentStep))?.id || 0;
 
@@ -673,9 +730,12 @@ function renderStepUI(step: Step, data: WorkPlanData, setData: any, finalReport:
               </div>
             )}
           </div>
-          <div className="flex justify-center no-print pb-10">
-            <button onClick={() => window.print()} className="w-full md:w-auto bg-white text-slate-950 px-12 md:px-24 py-5 md:py-8 rounded-2xl md:rounded-[3rem] font-black text-lg md:text-xl shadow-2xl hover:bg-amber-500 transition-all flex items-center justify-center gap-4 group">
-              <Save className="w-6 h-6 md:w-8 md:h-8" /> ייצא תוכנית חתומה
+          <div className="flex justify-center no-print pb-10 gap-4">
+            <button onClick={() => window.print()} className="w-full md:w-auto bg-white text-slate-950 px-8 md:px-12 py-4 md:py-6 rounded-2xl md:rounded-[3rem] font-black text-lg md:text-xl shadow-2xl hover:bg-slate-200 transition-all flex items-center justify-center gap-3 group">
+              <Save className="w-6 h-6 md:w-8 md:h-8" /> שמור PDF
+            </button>
+             <button onClick={handleExportExcel} className="w-full md:w-auto bg-green-600 text-white px-8 md:px-12 py-4 md:py-6 rounded-2xl md:rounded-[3rem] font-black text-lg md:text-xl shadow-2xl hover:bg-green-500 transition-all flex items-center justify-center gap-3 group">
+              <Download className="w-6 h-6 md:w-8 md:h-8" /> ייצא לאקסל
             </button>
           </div>
         </div>
